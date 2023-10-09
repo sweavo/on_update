@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Usage:
+#
+#   on_update CMD FILE [FILE ...]
+#
+#
+# Execute CMD each time any of FILE... changes
+#
+
+TOUCHFILE=$(mktemp)
+function tidy {
+	rm $TOUCHFILE
+}
+trap tidy EXIT
+
+if [[ "$1" = "--limit" ]]
+then
+	LIM="| head -$2"
+	shift
+	shift
+fi
+if [[ "$!" = "--out" ]]
+then
+	OUT="> $2"
+	shift
+	shift
+fi
+
+CMD="$1 $LIM $OUT"
+shift
+
+touch -d "1901-01-01 00:00:00" "$TOUCHFILE"
+
+while true
+do
+	go=false
+
+	for file in "$@"
+	do
+		[ "$file" -nt "$TOUCHFILE" ] && go=true
+	done
+
+	if $go
+	then
+		touch $TOUCHFILE
+		clear
+		printf '>>> %s ====================================\n' "$CMD"
+		eval $CMD
+		printf '%d <<< %s ====================================\n' "$?" "$CMD"
+	fi
+	sleep 2
+done
+
